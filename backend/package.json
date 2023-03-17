@@ -1,0 +1,11 @@
+{
+  "name": "code-red-node-api",
+  "version": "1.0.0",
+  "description": "Backend System for CodeRed",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Abhishek Agarwal",
+  "license": "ISC"
+}

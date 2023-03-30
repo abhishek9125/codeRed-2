@@ -107,5 +107,47 @@ exports.verifyEmail = async (req, res) => {
         },
         message: 'Your Email is Verified'
     });
+}
+
+exports.resendEmailVerificationToken = async (req, res) => {
+
+    const { userId } = req.body;
+
+    const user = await User.findById(userId);
+
+    if(!user) {
+        return sendError(res, 'User Not Found');
+    }
+
+    if(user.isVerified) {
+        return sendError(res, 'User is already Verified..!!');
+    }
+
+    const alreadyHasToken = await EmailVerificationToken.findOne({ owner: userId });
+    if(alreadyHasToken) {
+        await EmailVerificationToken.findByIdAndDelete(alreadyHasToken._id);
+    }
+
+    let OTP = generateOTP(6);
+    const newEmailVerificationToken = new EmailVerificationToken({ owner: user._id, token: OTP });
+    await newEmailVerificationToken.save();
+
+    var transport = generateMailTransporter();
+
+    transport.sendMail({
+        from: 'verification@codered.com',
+        to: user.email,
+        subject: 'Email Verification',
+        html: `
+            <p> Your Verification OTP </p>
+            <h1> ${OTP} </h1>
+        `
+    })
+
+    return res.status(201).json({
+        message: "Please check your email. OTP has been sent to your email account."
+    })
 
 }
+
+

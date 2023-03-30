@@ -1,7 +1,11 @@
-const User = require('../models/user');
-const EmailVerificationToken = require('../models/emailVerificationToken');
+const jwt = require('jsonwebtoken');
+const { isValidObjectId } = require('mongoose');
+
 const { sendError } = require('../utils/helper');
 const { generateOTP, generateMailTransporter } = require('../utils/mail');
+
+const User = require('../models/user');
+const EmailVerificationToken = require('../models/emailVerificationToken');
 
 exports.register = async (req, res) => {
 
@@ -45,5 +49,63 @@ exports.register = async (req, res) => {
 }
 
 exports.verifyEmail = async (req, res) => {
+
     const { userId, OTP } = req.body;
+
+    if(!isValidObjectId(userId)) {
+        return sendError(res, 'Invalid User');
+    }
+
+    const user = await User.findById(userId);
+
+    if(!user) {
+        return sendError(res, 'User Not Found', 404);
+    }
+
+    if(user.isVerified) {
+        return sendError(res, 'User is already Verified..!!');
+    }
+
+    const token = await EmailVerificationToken.findOne({ owner: userId });
+
+    if(!token) {
+        return sendError(res, 'Token Not Found');
+    }
+
+    const isTokenValid = token.compareToken(OTP);
+
+    if(!isTokenValid) {
+        return sendError(res, 'OTP is Invalid');
+    }
+
+    user.isVerified = true;
+    await user.save();
+
+    await EmailVerificationToken.findByIdAndDelete(token._id);
+
+    var transport = generateMailTransporter();
+
+    transport.sendMail({
+        from: 'verification@codered.com',
+        to: user.email,
+        subject: 'Welcome Email',
+        html: `
+            <h1> Welcome to Our Coding Platform </h1>
+        `
+    });
+
+    const jwtToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+
+    return res.json({
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            token: jwtToken,
+            role: user.role,
+            isVerified: user.isVerified
+        },
+        message: 'Your Email is Verified'
+    });
+
 }

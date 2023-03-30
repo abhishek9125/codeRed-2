@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const UserSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
         required: true
@@ -8,11 +8,6 @@ const UserSchema = new mongoose.Schema({
     lastName: {
         type: String,
         required: true
-    },
-    username: {
-        type: String,
-        required: true,
-        unique: true
     },
     email: {
         type: String,
@@ -54,6 +49,11 @@ const UserSchema = new mongoose.Schema({
         state: { type: String },
         country: { type: String },
         postalCode: { type: String }
+    },
+    isVerified: {
+        type: Boolean,
+        required: true,
+        default: false
     },
     education: [{
         institution: { type: String },
@@ -265,4 +265,15 @@ const UserSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('User', UserSchema);
+userSchema.pre('save', async function(next) {
+    if(this.isModified('password')) {
+        this.password = await bcrpyt.hash(this.password, 10);
+    }
+    next();
+});
+
+userSchema.methods.comparePassword = async function(password) {
+    return await bcrpyt.compare(password, this.password);
+}
+
+module.exports = mongoose.model('User', userSchema);

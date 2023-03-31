@@ -7,6 +7,7 @@ const { generateOTP, generateMailTransporter } = require('../utils/mail');
 const User = require('../models/user');
 const EmailVerificationToken = require('../models/emailVerificationToken');
 const PasswordResetToken = require('../models/passwordResetToken');
+const { VERIFICATION_EMAIL } = require('../utils/constants');
 
 exports.register = async (req, res) => {
 
@@ -30,7 +31,7 @@ exports.register = async (req, res) => {
     var transport = generateMailTransporter();
 
     transport.sendMail({
-        from: "verification@codered.com",
+        from: VERIFICATION_EMAIL,
         to: newUser.email,
         subject: "Email Verification",
         html: `
@@ -87,7 +88,7 @@ exports.verifyEmail = async (req, res) => {
     var transport = generateMailTransporter();
 
     transport.sendMail({
-        from: 'verification@codered.com',
+        from: VERIFICATION_EMAIL,
         to: user.email,
         subject: 'Welcome Email',
         html: `
@@ -136,7 +137,7 @@ exports.resendEmailVerificationToken = async (req, res) => {
     var transport = generateMailTransporter();
 
     transport.sendMail({
-        from: 'verification@codered.com',
+        from: VERIFICATION_EMAIL,
         to: user.email,
         subject: 'Email Verification',
         html: `
@@ -180,7 +181,7 @@ exports.forgetPassword = async (req, res) => {
     var transport = generateMailTransporter();
 
     transport.sendMail({
-        from: 'security@codered.com',
+        from: VERIFICATION_EMAIL,
         to: user.email,
         subject: 'Reset Password Link',
         html: `

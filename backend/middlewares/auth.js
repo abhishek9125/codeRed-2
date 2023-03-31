@@ -1,49 +1,58 @@
 const jwt = require('jsonwebtoken')
+const { isValidObjectId } = require("mongoose");
+const { sendError } = require("../utils/helper");
 const User = require('../models/user');
+const PasswordResetToken = require("../models/passwordResetToken");
 
-exports.authCheck = async (req, res, next) => {
-    try {
+exports.isAuth = async (req, res, next) => {
+    const token = req.headers?.authorization;
 
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    if (!token) return sendError(res, "Token not Found..!!");
+    const jwtToken = token.split("Bearer ")[1];
 
-            const token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!jwtToken) return sendError(res, "Invalid token!");
+    const decode = jwt.verify(jwtToken, process.env.JWT_SECRET);
+    const { userId } = decode;
 
-            req.user = await User.findById(decoded.id).select('-password');
-            next();
+    const user = await User.findById(userId);
+    if (!user) return sendError(res, "Unauthorized Access..!!");
 
-        }
+    req.user = user;
 
-    } catch (error) {
-        console.log("Error Validating the Token : ", error);
-        res.status(401).json({
-            error: 'Token is either Invalid or Expired.'
-        })
+    next();
+};
+
+exports.isAdmin = async (req, res, next) => {
+
+    const { user } = req;
+
+    if (user.role !== 'admin') {
+        return sendError(res, 'Unauthorized Access..!!');
     }
-}
 
-exports.adminCheck = async (req, res, next) => {
-    try {
+    next();
+};
 
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+exports.isValidPasswordResetToken = async (req, res, next) => {
+    const { token, userId } = req.body;
 
-            const token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const adminUser = await User.findById(decoded.id).select('-password');
-
-            if(adminUser.role !== 'admin') {
-                res.status(403).json({
-                    error : 'Admin Resouce. Access Denied'
-                });
-            } else {
-                next();
-            }
-        }
-
-    } catch (error) {
-        console.log("Error Validating the Token : ", error);
-        res.status(401).json({
-            error: 'Token is either Invalid or Expired.'
-        })
+    if (!token.trim() || !isValidObjectId(userId)) {
+        return sendError(req, 'Invalid Token or UserId', 400);
     }
+
+    const resetToken = await PasswordResetToken.findOne({ owner: userId });
+
+    if (!resetToken) {
+        return sendError(req, 'Unauthorized Access, Invalid Token');
+    }
+
+    const matched = await resetToken.compareToken(token);
+
+    if (!matched) {
+        return sendError(req, 'Unauthorized Access, Invalid Token');
+    }
+
+    req.resetToken = resetToken;
+
+    next();
 }

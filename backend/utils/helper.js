@@ -5,3 +5,13 @@ exports.sendError = (res, error, statusCode = 401) => {
 exports.handleNotFound = (req, res) => {
     this.sendError(res, "Not found", 404);
 };
+
+exports.generateRandomByte = () => {
+    return new Promise((resolve, reject) => {
+        crypto.randomBytes(30, (err, buff) => {
+            if (err) reject(err);
+            const buffString = buff.toString("hex");
+            resolve(buffString);
+        })
+    })
+};

@@ -4,6 +4,9 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { readdirSync } = require('fs');
+const { errorHandler } = require('./middlewares/error');
+const { handleNotFound } = require('./utils/helper');
+
 require('dotenv').config();
 
 // App Initialisation
@@ -22,6 +25,8 @@ app.use(cors());
 
 // Routes
 readdirSync('./routes').map((route) => app.use('/api', require(`./routes/${route}`)));
+app.use("/*", handleNotFound);
+app.use(errorHandler);
 
 // Port
 const port = process.env.PORT || 8000;
